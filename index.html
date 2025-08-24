@@ -1,35 +1,119 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Prueba de conexión</title>
+  <title>Registro de Documentos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: #fff;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 400px;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 6px;
+      background: #007bff;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #mensaje {
+      margin-top: 15px;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-  <h2>Prueba de conexión con Apps Script</h2>
-  <button onclick="probar()">Enviar prueba</button>
-  <pre id="resultado"></pre>
+  <div class="container">
+    <h2>Registro de Documentos</h2>
+    <form id="formulario">
+      <label for="tipo">Tipo de documento</label>
+      <select id="tipo" name="tipo">
+        <option value="Oficio">Oficio</option>
+        <option value="Resolución">Resolución</option>
+      </select>
+
+      <label for="destino">Destino</label>
+      <input type="text" id="destino" name="destino" required>
+
+      <label for="asunto">Asunto</label>
+      <input type="text" id="asunto" name="asunto" required>
+
+      <label for="redactor">Redactor</label>
+      <input type="text" id="redactor" name="redactor" required>
+
+      <button type="submit">Guardar registro</button>
+    </form>
+    <p id="mensaje"></p>
+  </div>
 
   <script>
-    async function probar() {
+    const API_URL = "PEGA_AQUI_TU_URL_EXEC"; // 👈 tu enlace Apps Script
+
+    document.getElementById("formulario").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const data = {
+        Tipo: document.getElementById("tipo").value,
+        Destino: document.getElementById("destino").value,
+        Asunto: document.getElementById("asunto").value,
+        Redactor: document.getElementById("redactor").value
+      };
+
+      document.getElementById("mensaje").innerText = "⏳ Guardando...";
+
       try {
-        let res = await fetch("https://script.google.com/macros/s/AKfycbxiGl25jJPkGEAgasZdXPqZjEdL_wHks2lF4ue0ARge75CZrZYS5GGfxczW8XtjKG-uWw/exec", {
+        let res = await fetch(API_URL, {
           method: "POST",
-          mode: "no-cors", // <-- primero prueba sin CORS
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            Tipo: "Oficio",
-            Destino: "Prueba",
-            Asunto: "Test conexión",
-            Redactor: "Yo"
-          })
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
         });
-        document.getElementById("resultado").innerText = "Solicitud enviada. Revisa tu Google Sheet.";
+        let json = await res.json();
+
+        if (json.status === "OK") {
+          document.getElementById("mensaje").innerText = 
+            "✅ Guardado: " + data.Tipo + " Nº " + json.numero + " | Expediente: " + json.expediente;
+          this.reset();
+        } else {
+          document.getElementById("mensaje").innerText = "❌ Error: " + json.message;
+        }
       } catch (err) {
-        document.getElementById("resultado").innerText = "Error: " + err;
+        document.getElementById("mensaje").innerText = "❌ Error al guardar: " + err.message;
       }
-    }
+    });
   </script>
 </body>
 </html>
