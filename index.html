@@ -1,78 +1,39 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Registro de Documentos</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f6f9; }
-    h2 { text-align: center; color: #2c3e50; }
-    form { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
-    label { display: block; margin-top: 10px; font-weight: bold; }
-    input, select { width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; }
-    button { margin-top: 15px; padding: 10px; width: 100%; border: none; border-radius: 5px; background: #3498db; color: white; font-size: 16px; cursor: pointer; }
-    button:hover { background: #2980b9; }
-    #mensaje { margin-top: 20px; text-align: center; font-weight: bold; }
-  </style>
+  <title>Prueba de conexión</title>
 </head>
 <body>
-  <h2>Registro de Documentos</h2>
-  <form id="registroForm">
-    <label for="tipo">Tipo de documento</label>
-    <select id="tipo" name="tipo" required>
-      <option value="Oficio">Oficio</option>
-      <option value="Resolución">Resolución</option>
-    </select>
-
-    <label for="destino">Destino</label>
-    <input type="text" id="destino" name="destino" required>
-
-    <label for="asunto">Asunto</label>
-    <input type="text" id="asunto" name="asunto" required>
-
-    <label for="redactor">Redactor</label>
-    <input type="text" id="redactor" name="redactor" required>
-
-    <button type="submit">Guardar registro</button>
-  </form>
-
-  <div id="mensaje"></div>
+  <h2>Prueba de conexión con Apps Script</h2>
+  <button onclick="probar()">Enviar prueba</button>
+  <pre id="resultado"></pre>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbxiGl25jJPkGEAgasZdXPqZjEdL_wHks2lF4ue0ARge75CZrZYS5GGfxczW8XtjKG-uWw/exec";
-
-    document.getElementById("registroForm").addEventListener("submit", function(e) {
-      e.preventDefault();
-
-      const data = {
-        Tipo: document.getElementById("tipo").value,
-        Destino: document.getElementById("destino").value,
-        Asunto: document.getElementById("asunto").value,
-        Redactor: document.getElementById("redactor").value
-      };
-
-      document.getElementById("mensaje").innerText = "Guardando...";
-
-      fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      })
-      .then(res => res.json())
-      .then(json => {
-        if (json.status === "OK") {
-          document.getElementById("mensaje").innerText = "✅ Registro guardado correctamente";
-          this.reset();
-        } else {
-          document.getElementById("mensaje").innerText = "❌ Error: " + (json.error || "respuesta inesperada");
-        }
-      })
-      .catch(err => {
-        document.getElementById("mensaje").innerText = "❌ Error al guardar: " + err.message;
-      });
-    });
+    async function probar() {
+      try {
+        let res = await fetch("https://script.google.com/macros/s/AKfycbxiGl25jJPkGEAgasZdXPqZjEdL_wHks2lF4ue0ARge75CZrZYS5GGfxczW8XtjKG-uWw/exec", {
+          method: "POST",
+          mode: "no-cors", // <-- primero prueba sin CORS
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            Tipo: "Oficio",
+            Destino: "Prueba",
+            Asunto: "Test conexión",
+            Redactor: "Yo"
+          })
+        });
+        document.getElementById("resultado").innerText = "Solicitud enviada. Revisa tu Google Sheet.";
+      } catch (err) {
+        document.getElementById("resultado").innerText = "Error: " + err;
+      }
+    }
   </script>
 </body>
 </html>
+
 
 
 
