@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Registro de Documentos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f7f8fb; color: #222; }
+    h2 { text-align: center; margin-bottom: 10px; }
+    .card { max-width: 900px; margin: 0 auto; background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+    label { font-weight: 600; margin-top: 8px; display: block; }
+    input, select, button { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #cfd6e4; border-radius: 10px; }
+    button { background: #0d6efd; color: #fff; border: none; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border: 1px solid #e3e7ee; padding: 8px; text-align: left; font-size: 14px; }
+    th { background: #0d6efd; color: #fff; }
+    .toolbar { display: flex; gap: 10px; margin-top: 12px; }
+    .ok { color: #0a7a2f; font-weight: 700; }
+    .err { color: #b00020; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h2>📑 Registro y Control de Documentos</h2>
+  <div class="card">
+    <div class="row">
+      <div>
+        <label>Tipo de documento</label>
+        <select id="tipo">
+          <option value="Oficio">Oficio</option>
+          <option value="Resolución">Resolución</option>
+        </select>
+      </div>
+      <div>
+        <label>Redactado por</label>
+        <input type="text" id="redactor" placeholder="Nombre de quien redacta" />
+      </div>
+    </div>
+
+    <label>Destino</label>
+    <input type="text" id="destino" placeholder="Dirección, persona o institución" />
+
+    <label>Asunto</label>
+    <input type="text" id="asunto" placeholder="Escribe el asunto" />
+
+    <div class="toolbar">
+      <button id="btnSave" onclick="registrar()">Guardar registro</button>
+      <button onclick="exportarCSV()">Exportar reporte (CSV)</button>
+    </div>
+
+    <p id="estado"></p>
+
+    <table id="tabla">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Número</th>
+          <th>Expediente</th>
+          <th>Fecha</th>
+          <th>Asunto</th>
+          <th>Destino</th>
+          <th>Redactor</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbw9Q_yixzrXwVm2JhHB_kLmXqVLDkwZZEEJT-UZv2IkgO37gQJJCCmxeUxUWAzJ_KZo_A/exec"; // <= reemplaza por tu URL /exec
+
+    // almacén en memoria de lo ya registrado en esta sesión (para ver al instante)
+    const registros = [];
+
+    async function registrar() {
+      const btn = document.getElementById('btnSave');
+      const estado = document.getElementById('estado');
+
+      const tipo = document.getElementById('tipo').value;
+      const asunto = document.getElementById('asunto').value.trim();
+      const destino = document.getElementById('destino').value.trim();
+      const redactor = document.getElementById('redactor').value.trim();
+      const fecha = new Date().toLocaleDateString();
+
+      if (!asunto || !destino || !redactor) {
+        estado.innerHTML = '<span class="err">Completa Asunto, Destino y Redactor.</span>';
+        return;
+      }
+
+      const payload = { Tipo: tipo, Asunto: asunto, Destino: destino, Redactor: redactor, Fecha: fecha };
+
+      try {
+        btn.disabled = true;
+        estado.textContent = 'Guardando...';
+
+        const resp = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+          const txt = await resp.text();
+          throw new Error('HTTP ' + resp.status + ': ' + txt);
+        }
+
+        const data = await resp.json();
+        if (!data.ok) {
+          throw new Error(data.error || 'Error desconocido del servidor');
+        }
+
+        // Mostrar en tiempo real el registro confirmado por el servidor (incluye número y expediente definitivos)
+        const fila = {
+          Tipo: tipo,
+          Número: data.numero,
+          Expediente: data.expediente,
+          Fecha: data.fecha || fecha,
+          Asunto: asunto,
+          Destino: destino,
+          Redactor: redactor
+        };
+        registros.push(fila);
+        pintarTabla();
+
+        limpiar();
+        estado.innerHTML = '<span class="ok">¡Guardado! ' + tipo + ' N° ' + data.numero + ' — Exp. ' + data.expediente + '</span>';
+      } catch (err) {
+        console.error(err);
+        estado.innerHTML = '<span class="err">No se pudo guardar: ' + err.message + '</span>';
+        alert('Error al guardar:\n' + err.message + '\n\nRevisa que:\n- API_URL es correcta\n- La app está implementada como Web App\n- Diste permisos y elegiste "Cualquiera con el enlace"');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function pintarTabla() {
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = '';
+      registros.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.Tipo}</td>
+          <td>${r.Número}</td>
+          <td>${r.Expediente}</td>
+          <td>${r.Fecha}</td>
+          <td>${r.Asunto}</td>
+          <td>${r.Destino}</td>
+          <td>${r.Redactor}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function exportarCSV() {
+      if (registros.length === 0) { alert('No hay registros para exportar.'); return; }
+      const encabezados = ['Tipo','Número','Expediente','Fecha','Asunto','Destino','Redactor'];
+      const filas = registros.map(r => [r.Tipo, r.Número, r.Expediente, r.Fecha, `"${r.Asunto}"`, `"${r.Destino}"`, r.Redactor]);
+      let csv = encabezados.join(',') + '\n' + filas.map(f => f.join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'reporte_documentos.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function limpiar() {
+      document.getElementById('asunto').value = '';
+      document.getElementById('destino').value = '';
+      document.getElementById('redactor').value = '';
+      document.getElementById('asunto').focus();
+    }
+  </script>
+</body>
+</html>
